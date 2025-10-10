@@ -17,6 +17,6 @@ router.get("/getArtistProfile", protect, getArtistProfile);
 router.get("/getAllArtistProfiles", getAllArtistProfiles);
 router.get("/getArtistProfileById/:id", getArtistProfileById);
 router.put("/updateArtistProfile", protect, updateArtistProfile);
-router.delete("/deleteArtistProfile", protect, deleteArtistProfile);
+router.delete("/deleteArtistProfile/:id", protect, deleteArtistProfile);
 
 export default router;
