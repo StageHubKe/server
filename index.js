@@ -1,15 +1,19 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import http from "http";
 import cookieParser from "cookie-parser";
 import connectDB from "./src/config/db.js";
 import helmet from "helmet";
 import morgan  from "morgan";
 import authRoutes from "./src/routes/authRoute.js"
 import artistProfileRoutes from "./src/routes/artistProfileRoutes.js"
+import messageRoutes from "./src/routes/MessageRoute.js";
+import { setupSocket } from "./src/socket.js";
 
 dotenv.config();
 const app = express();
+const server = http.createServer(app);
 
 app.use(express.json());
 app.use(cookieParser());
@@ -30,9 +34,15 @@ const port = process.env.PORT || 5000;
 connectDB();
 app.use("/api/auth", authRoutes);
 app.use("/api/artistProfile", artistProfileRoutes);
+app.use("/api/messages", messageRoutes);
 
-app.listen(port, "0.0.0.0", () =>
-  console.log(`🚀 Server running on port ${port}`)
+const io = setupSocket(server);
+app.set("socketio", io);
+
+
+server.listen(port, "0.0.0.0", () =>
+  console.log(`🚀 Server + Socket.IO running on port ${port}`)
 );
+
 
 
