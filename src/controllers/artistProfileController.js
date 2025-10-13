@@ -1,6 +1,5 @@
 import ArtistProfile from "../models/ArtistProfileModel.js";
 
-// Create artist profile
 export const createArtistProfile = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -68,7 +67,7 @@ export const getAllArtistProfiles = async (req, res)=>{
     })
   }
 }
-// Get artist profile
+
 export const getArtistProfile = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -97,7 +96,6 @@ export const getArtistProfile = async (req, res) => {
   }
 };
 
-// Update artist profile
 export const updateArtistProfile = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -130,7 +128,6 @@ export const updateArtistProfile = async (req, res) => {
   }
 };
 
-// Delete artist profile
 export const deleteArtistProfile = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -154,8 +151,6 @@ export const deleteArtistProfile = async (req, res) => {
     });
   }
 };
-
-//get artist by id
 
 export const getArtistProfileById = async (req, res)=> {
   try {
