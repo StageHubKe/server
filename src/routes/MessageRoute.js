@@ -1,4 +1,4 @@
-import express from "express";
+import express from 'express';
 import {
   getConversationMessages,
   getOrCreateConversation,
@@ -7,6 +7,9 @@ import {
   sendMessage,
   markMessageAsRead,
   getUnreadMessageCount,
+  deleteConversation,
+  editMessage,
+  deleteMessage,
 } from "../controllers/MessageController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -19,5 +22,8 @@ router.get("/conversation/:conversationId/messages", protect, getConversationMes
 router.post("/message", protect, sendMessage);
 router.put("/message/:messageId/read", protect, markMessageAsRead);
 router.get("/unreadCount", protect, getUnreadMessageCount);
+router.delete("/conversation/:conversationId", protect, deleteConversation);
+router.put("/message/:messageId", protect, editMessage);
+router.delete("/message/:messageId", protect, deleteMessage);
 
 export default router;
