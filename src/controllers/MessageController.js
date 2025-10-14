@@ -283,3 +283,149 @@ export const getUnreadMessageCount = async (req, res) => {
     res.status(500).json({ message: "Server error fetching unread message count" });
   }
 };
+
+export const deleteConversation = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { conversationId } = req.params;
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(401).json({ msg: "Invalid or missing user ID in request" });
+    }
+
+    if (!conversationId || !mongoose.Types.ObjectId.isValid(conversationId)) {
+      return res.status(400).json({ msg: "Valid conversationId is required" });
+    }
+
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ message: "Conversation not found" });
+    }
+
+    if (!conversation.participants.includes(userId)) {
+      return res.status(403).json({ message: "Not authorized to delete this conversation" });
+    }
+    await Message.deleteMany({ conversation: conversationId });
+    await Conversation.findByIdAndDelete(conversationId);
+    const io = req.app.get("socketio");
+    conversation.participants.forEach((participantId) => {
+      io.to(participantId.toString()).emit("conversation_deleted", { conversationId });
+    });
+
+    res.status(200).json({ message: "Conversation deleted successfully" });
+  } catch (err) {
+    console.error("Error in deleteConversation:", {
+      error: err.message,
+      stack: err.stack,
+      conversationId: req.params.conversationId,
+      userId: req.userId,
+    });
+    res.status(500).json({ message: "Server error deleting conversation" });
+  }
+};
+
+export const editMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { text } = req.body;
+    const userId = req.userId;
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(401).json({ msg: "Invalid or missing user ID in request" });
+    }
+    if (!messageId || !mongoose.Types.ObjectId.isValid(messageId)) {
+      return res.status(400).json({ msg: "Valid messageId is required" });
+    }
+    if (!text || !text.trim()) {
+      return res.status(400).json({ msg: "Text is required" });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+    if (message.sender.toString() !== userId) {
+      return res.status(403).json({ message: "Not authorized to edit this message" });
+    }
+
+    message.text = text;
+    message.updatedAt = new Date();
+    await message.save();
+
+    const populatedMessage = await Message.findById(messageId).populate("sender", "name email");
+
+    const conversation = await Conversation.findById(message.conversation);
+    if (conversation) {
+      conversation.lastMessage = text;
+      conversation.updatedAt = new Date();
+      await conversation.save();
+
+      const io = req.app.get("socketio");
+      conversation.participants.forEach((participantId) => {
+        io.to(participantId.toString()).emit("message_updated", populatedMessage);
+        io.to(participantId.toString()).emit("conversation_updated", conversation);
+      });
+    }
+
+    res.status(200).json({ message: populatedMessage });
+  } catch (err) {
+    console.error("Error in editMessage:", {
+      error: err.message,
+      stack: err.stack,
+      messageId: req.params.messageId,
+      userId: req.userId,
+    });
+    res.status(500).json({ message: "Server error editing message" });
+  }
+};
+
+export const deleteMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.userId;
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(401).json({ msg: "Invalid or missing user ID in request" });
+    }
+    if (!messageId || !mongoose.Types.ObjectId.isValid(messageId)) {
+      return res.status(400).json({ msg: "Valid messageId is required" });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+    if (message.sender.toString() !== userId) {
+      return res.status(403).json({ message: "Not authorized to delete this message" });
+    }
+
+    const conversationId = message.conversation;
+    await Message.findByIdAndDelete(messageId);
+
+    const conversation = await Conversation.findById(conversationId);
+    if (conversation) {
+      const latestMessage = await Message.findOne({ conversation: conversationId })
+        .sort({ createdAt: -1 })
+        .limit(1);
+      conversation.lastMessage = latestMessage ? latestMessage.text : undefined;
+      conversation.updatedAt = new Date();
+      await conversation.save();
+
+      const io = req.app.get("socketio");
+      conversation.participants.forEach((participantId) => {
+        io.to(participantId.toString()).emit("message_deleted", { messageId, conversationId });
+        io.to(participantId.toString()).emit("conversation_updated", conversation);
+      });
+    }
+
+    res.status(200).json({ message: "Message deleted successfully" });
+  } catch (err) {
+    console.error("Error in deleteMessage:", {
+      error: err.message,
+      stack: err.stack,
+      messageId: req.params.messageId,
+      userId: req.userId,
+    });
+    res.status(500).json({ message: "Server error deleting message" });
+  }
+};

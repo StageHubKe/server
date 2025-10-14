@@ -5,7 +5,7 @@ import Conversation from "./models/ConversationModel.js";
 export const setupSocket = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: process.env.CLIENT_URL || "http://localhost:3000",
+      origin: process.env.CLIENT_URL || "http://localhost:5000",
       methods: ["GET", "POST"],
       credentials: true,
     },
@@ -102,13 +102,81 @@ export const setupSocket = (server) => {
       }
     });
 
+    // Edit message
+    socket.on("edit_message", async ({ messageId, text }) => {
+      try {
+        const message = await Message.findById(messageId);
+        if (!message) return;
+
+        message.text = text;
+        message.updatedAt = new Date();
+        await message.save();
+
+        const populatedMessage = await Message.findById(messageId).populate("sender", "name email");
+
+        const conversation = await Conversation.findById(message.conversation);
+        if (conversation) {
+          conversation.lastMessage = text;
+          conversation.updatedAt = new Date();
+          await conversation.save();
+
+          conversation.participants.forEach((participantId) => {
+            io.to(participantId.toString()).emit("message_updated", populatedMessage);
+            io.to(participantId.toString()).emit("conversation_updated", conversation);
+          });
+        }
+      } catch (err) {
+        console.error("Error editing message:", err);
+      }
+    });
+
+    // Delete message
+    socket.on("delete_message", async ({ messageId, conversationId }) => {
+      try {
+        await Message.findByIdAndDelete(messageId);
+
+        const conversation = await Conversation.findById(conversationId);
+        if (conversation) {
+          const latestMessage = await Message.findOne({ conversation: conversationId })
+            .sort({ createdAt: -1 })
+            .limit(1);
+          conversation.lastMessage = latestMessage ? latestMessage.text : undefined;
+          conversation.updatedAt = new Date();
+          await conversation.save();
+
+          conversation.participants.forEach((participantId) => {
+            io.to(participantId.toString()).emit("message_deleted", { messageId, conversationId });
+            io.to(participantId.toString()).emit("conversation_updated", conversation);
+          });
+        }
+      } catch (err) {
+        console.error("Error deleting message:", err);
+      }
+    });
+
+    // Delete conversation
+    socket.on("delete_conversation", async ({ conversationId }) => {
+      try {
+        const conversation = await Conversation.findById(conversationId);
+        if (!conversation) return;
+
+        await Message.deleteMany({ conversation: conversationId });
+        await Conversation.findByIdAndDelete(conversationId);
+
+        conversation.participants.forEach((participantId) => {
+          io.to(participantId.toString()).emit("conversation_deleted", { conversationId });
+        });
+      } catch (err) {
+        console.error("Error deleting conversation:", err);
+      }
+    });
+
     // User disconnected
     socket.on("disconnect", () => {
       console.log("❌ Client disconnected:", socket.id);
       for (const [userId, socketId] of onlineUsers.entries()) {
         if (socketId === socket.id) {
           onlineUsers.delete(userId);
-          // Emit user_status for offline
           io.emit("user_status", { userId, online: false });
           console.log(`❌ User ${userId} disconnected`);
           break;
