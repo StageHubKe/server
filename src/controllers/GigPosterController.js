@@ -17,10 +17,13 @@ export const createGigPoster = async (req, res) => {
       budget,
       eventPlannerName,
       contactInfo,
-      eventDate,
+      multiDay,
+      eventStartDate,
+      eventEndDate,
       posterImage,
     } = req.body;
 
+    // Basic validation
     if (
       !eventType ||
       !artistCategory ||
@@ -33,11 +36,19 @@ export const createGigPoster = async (req, res) => {
       !budget ||
       !eventPlannerName ||
       !contactInfo ||
-      !eventDate
+      !eventStartDate
     ) {
       return res.status(400).json({
         success: false,
-        message: "Please fill in all required fields including event date",
+        message: "Please fill in all required fields including event start date",
+      });
+    }
+
+    // If multi-day, eventEndDate is required
+    if (multiDay && !eventEndDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide the event end date for multi-day events",
       });
     }
 
@@ -55,7 +66,9 @@ export const createGigPoster = async (req, res) => {
       budget,
       eventPlannerName,
       contactInfo,
-      eventDate,
+      multiDay,
+      eventStartDate,
+      eventEndDate: multiDay ? eventEndDate : eventStartDate,
       posterImage,
       createdBy: req.user?.id || null,
     });
@@ -75,6 +88,7 @@ export const createGigPoster = async (req, res) => {
     });
   }
 };
+
 
 // Fetch all gig posters
 export const getAllGigPosters = async (req, res) => {

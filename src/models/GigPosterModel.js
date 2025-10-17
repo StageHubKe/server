@@ -19,7 +19,6 @@ const GigPosterSchema = new mongoose.Schema(
       enum: ["Musician", "Comedian", "DJ", "MC", "Band", "Dancer"],
       required: true,
     },
-
     instrumentsProvided: { type: Boolean, default: false },
     performerEquipment: { type: String, trim: true },
     guestCount: { type: Number, required: true },
@@ -40,7 +39,9 @@ const GigPosterSchema = new mongoose.Schema(
     budget: { type: Number, required: true, min: 0 },
     eventPlannerName: { type: String, required: true, trim: true },
     contactInfo: { type: String, required: true, trim: true },
-    eventDate: { type: Date, required: true },
+    multiDay: { type: Boolean, default: false },
+    eventStartDate: { type: Date, required: true },
+    eventEndDate: { type: Date }, // optional if multiDay is false
     posterImage: { type: String, default: "" },
     status: {
       type: String,
