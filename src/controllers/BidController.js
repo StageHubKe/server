@@ -144,7 +144,7 @@ export const updateBidStatus = async (req, res) => {
     const { bidId } = req.params;
     const { status } = req.body;
 
-    if (!["pending", "accepted", "rejected"].includes(status)) {
+    if (!["pending", "accepted", "rejected", "unsuccessful"].includes(status)) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid bid status" });
