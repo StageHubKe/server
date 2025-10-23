@@ -3,8 +3,9 @@ import jwt from "jsonwebtoken";
 import User from "../models/UserModel.js";
 import { sendVerificationEmail } from "../utils/sendEmail.js";
 import { sendResetPasswordEmail } from "../utils/resetPass.js";
+import { OAuth2Client } from "google-auth-library";
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// REGISTER USER + SEND VERIFICATION EMAIL
 export const userRegistration = async (req, res) => {
   const { name, email, password } = req.body;
   try {
@@ -44,12 +45,10 @@ export const verifyEmail = async (req, res) => {
 
     const user = await User.findOne({ email: decoded.email });
     if (!user) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Invalid or expired verification link.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification link.",
+      });
     }
 
     if (user.isVerified) {
@@ -59,12 +58,10 @@ export const verifyEmail = async (req, res) => {
     }
 
     if (user.verifyToken !== token) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Invalid or expired verification link.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification link.",
+      });
     }
 
     user.isVerified = true;
@@ -76,12 +73,10 @@ export const verifyEmail = async (req, res) => {
       .json({ success: true, message: "Email verified successfully!" });
   } catch (error) {
     console.error("Error verifying email:", error);
-    res
-      .status(400)
-      .json({
-        success: false,
-        message: "Verification failed or link expired.",
-      });
+    res.status(400).json({
+      success: false,
+      message: "Verification failed or link expired.",
+    });
   }
 };
 
@@ -214,7 +209,10 @@ export const forgotPassword = async (req, res) => {
     if (!user) {
       return res
         .status(404)
-        .json({ success: false, message: "User with this email does not exist" });
+        .json({
+          success: false,
+          message: "User with this email does not exist",
+        });
     }
 
     // Generate token valid for 1 hour
@@ -274,5 +272,71 @@ export const resetPassword = async (req, res) => {
     res
       .status(400)
       .json({ success: false, message: "Reset link expired or invalid" });
+  }
+};
+
+export const googleAuth = async (req, res) => {
+  try {
+    const { credential } = req.body; // token from Google
+
+    if (!credential)
+      return res.status(400).json({ success: false, message: "Missing token" });
+
+    // Verify token with Google
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+
+    // Check if user already exists
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = new User({
+        name,
+        email,
+        isVerified: true,
+        profilePicture: picture,
+        authProvider: "google",
+      });
+      await user.save();
+    }
+
+    // Generate JWT
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    user.token = token;
+    await user.save();
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Google authentication successful",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        picture: user.profilePicture,
+      },
+    });
+  } catch (error) {
+    console.error("Google Auth Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Google authentication failed",
+    });
   }
 };
