@@ -175,3 +175,33 @@ export const getArtistProfileById = async (req, res)=> {
     });
   }
 }
+
+export const getArtistProfileByUserId = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    const profile = await ArtistProfile.findOne({ user: userId }).populate(
+      "user",
+      "name email role"
+    );
+
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        message: "Profile not found for this user",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      profile,
+    });
+  } catch (error) {
+    console.error("Error fetching artist profile by user ID:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching artist profile by user ID",
+    });
+  }
+};
+

@@ -9,6 +9,11 @@ import morgan  from "morgan";
 import authRoutes from "./src/routes/authRoute.js"
 import artistProfileRoutes from "./src/routes/artistProfileRoutes.js"
 import messageRoutes from "./src/routes/MessageRoute.js";
+import gigPosterRoutes from "./src/routes/gigPosterRoutes.js";
+import bidRoutes from "./src/routes/bidRoutes.js";
+import notificationsRoutes from "./src/routes/notificationRoute.js";
+import eventRoutes from "./src/routes/eventRoutes.js";
+
 import { setupSocket } from "./src/socket.js";
 
 dotenv.config();
@@ -35,6 +40,10 @@ connectDB();
 app.use("/api/auth", authRoutes);
 app.use("/api/artistProfile", artistProfileRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/gigposter", gigPosterRoutes);
+app.use("/api/bids", bidRoutes);
+app.use("/api/notifications", notificationsRoutes);
+app.use("/api/events", eventRoutes);
 
 const io = setupSocket(server);
 app.set("socketio", io);
