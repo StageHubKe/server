@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config(); 
+dotenv.config();
 
 import { google } from "googleapis";
 import Meet from "../models/MeetModel.js";
@@ -48,7 +48,7 @@ export const createGoogleMeet = async (req, res) => {
       end: {
         dateTime:
           endTime ||
-          new Date(new Date().getTime() + 30 * 60 * 1000).toISOString(), // default 30 min
+          new Date(new Date().getTime() + 30 * 60 * 1000).toISOString(),
         timeZone: "Africa/Nairobi",
       },
       conferenceData: {
@@ -59,11 +59,13 @@ export const createGoogleMeet = async (req, res) => {
       },
     };
 
-    const response = calendar.events.insert({
+    const responsePromise = calendar.events.insert({
       calendarId: "primary",
       resource: event,
       conferenceDataVersion: 1,
     });
+
+    const response = await responsePromise;
 
     const meetLink = response.data.hangoutLink;
     const newMeet = new Meet({
