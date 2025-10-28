@@ -1,6 +1,5 @@
-// src/controllers/meetController.js
 import dotenv from "dotenv";
-dotenv.config(); // Load .env variables at the very top
+dotenv.config(); 
 
 import { google } from "googleapis";
 import Meet from "../models/MeetModel.js";
