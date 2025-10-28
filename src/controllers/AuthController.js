@@ -120,6 +120,7 @@ export const loginUser = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
+ console.log("token:", token);
 
     existingUser.token = token;
     await existingUser.save();
@@ -277,8 +278,8 @@ export const resetPassword = async (req, res) => {
 
 export const googleAuth = async (req, res) => {
   try {
-    const { credential } = req.body; // token from Google
-
+    const { credential } = req.body; 
+    console.log("Received Google credential:", credential);
     if (!credential)
       return res.status(400).json({ success: false, message: "Missing token" });
 
@@ -311,6 +312,7 @@ export const googleAuth = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
+    console.log("google token:", token);
 
     user.token = token;
     await user.save();
