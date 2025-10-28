@@ -4,14 +4,11 @@ import User from "../models/UserModel.js";
 
 export const protect = async (req, res, next) => {
   try {
-    // 1️⃣ Get token from cookies
     const token = req.cookies?.token;
-
     if (!token) {
       return res.status(401).json({ message: "Not authorized, token missing" });
     }
 
-    // 2️⃣ Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (!decoded?.id) {
       return res.status(401).json({ message: "Invalid token" });
